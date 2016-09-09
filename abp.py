@@ -60,7 +60,6 @@ import six
 from collections import OrderedDict
 from contextlib import contextmanager
 from difflib import SequenceMatcher
-from six.moves import zip_longest
 
 from lxml import html
 from math import ceil, floor
@@ -330,17 +329,12 @@ with create_download_dir() as download_dir:
         sheet_image = Image.new('RGB', (int(sheet_width), int(sheet_height)), 'white')
 
         for (i, (image, image_file, card, filename)) in enumerate(cropped_images):
-            print 'width:', image.width, 'vs', inner_card_width
-            print 'height:', image.height, 'vs', inner_card_height
             if image.width != inner_card_width or image.height != inner_card_height:
-                print 'resizing'
                 new_width, new_height = scale_to_fit(image.width, image.height, inner_card_width, inner_card_height)
                 new_width, new_height = ceil(new_width), ceil(new_height)
-                print new_width, 'x', new_height
                 if new_width != image.width and new_height != image.height:
                     image = image.resize((int(new_width), int(new_height)), Image.LANCZOS)
-            else:
-                print 'not resizing'
+
             border_image = Image.new('RGB', (outer_card_width, outer_card_height), 'black')
             inner_card_x = max(border_leading, floor((outer_card_width - image.width) / 2.0))
             inner_card_y = max(border_leading, floor((outer_card_height - image.height) / 2.0))
