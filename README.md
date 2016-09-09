@@ -40,3 +40,21 @@ http://magiccards.info/scans/en/vma/1.jpg # Ancestral Recall
 ## Sheet01_134.26dpi.png
 ![alt text](https://github.com/RobRuana/abp/raw/master/example_Sheet01_134.26dpi.png "Example output")
 
+## Installation
+
+```
+pip install -r requirements.txt
+```
+
+If it fails with the following error message:
+```
+ValueError: jpeg is required unless explicitly disabled using --disable-jpeg, aborting
+```
+
+Try install ``libjpeg`` (or equivalent for your OS)
+```
+# on OS X with homebrew
+brew install libjpeg
+```
+
+

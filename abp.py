@@ -21,7 +21,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
 '''
 # Example input file, comments and blank lines are supported
 
@@ -57,14 +56,16 @@ import requests
 import tempfile
 import time
 
+import six
 from collections import OrderedDict
 from contextlib import contextmanager
 from difflib import SequenceMatcher
-from itertools import chain, islice, zip_longest
+from six.moves import zip_longest
+
 from lxml import html
 from math import ceil, floor
 from PIL import Image, ImageChops, ImageEnhance
-from urllib.parse import quote, unquote_plus, urlparse
+from six.moves.urllib.parse import quote, unquote_plus, urlparse
 
 
 parser = argparse.ArgumentParser(description='A.B.P. Always Be Proxying. Generate proxy sheets from mythicspoiler.com')
@@ -87,6 +88,10 @@ class RoundRobinIter(object):
     def __iter__(self):
         self.stopIndex = -1
         return self
+
+    def next(self):
+        return self.__next__()
+
     def __next__(self):
         if self.stopIndex == -1:
             self.stopIndex = self.nextIndex
@@ -105,11 +110,10 @@ search_engines = OrderedDict([
 
 search_engines_round_robin = RoundRobinIter(list(search_engines.keys()))
 
-
 # Only prints when --verbose
 def log(*s, **kw):
     if args.verbose:
-        print(*s, **kw)
+        six.print_(*s, **kw)
 
 def chunks(iterable, size=2):
     return [iterable[x:x + size] for x in range(0, len(iterable), size)]
@@ -119,7 +123,8 @@ def scale_to_fit(width, height, bounds_width, bounds_height):
         return (width, min(height, bounds_height))
     if height <= 0:
         return (min(width, bounds_width), height)
-    scale = min(bounds_width / width, bounds_height / height)
+    # get true-division on python 2
+    scale = min(float(bounds_width) / width, float(bounds_height) / height)
     return (width * scale, height * scale)
 
 # Context manager that creates appropriate download directory
@@ -171,8 +176,8 @@ def cached_download(url, filename, download_dir, query=''):
                         output.write(chunk)
         else:
             cache_file = None
-            print('ERROR {} {}'.format(response.status_code, response.reason))
-            print(response.text)
+            six.print_('ERROR {} {}'.format(response.status_code, response.reason))
+            six.print_(response.text)
         time.sleep(0.5)
     return cache_file
 
@@ -275,7 +280,7 @@ def images_for_cards(cards, download_dir):
             image = Image.open(image_file)
             yield (image, image_file, card, filename)
         else:
-            print('Could not find image for "{}"'.format(card))
+            six.print_('Could not find image for "{}"'.format(card))
 
 def crop_border(image):
     bright_image = ImageEnhance.Brightness(image).enhance(2)
@@ -322,26 +327,32 @@ with create_download_dir() as download_dir:
         dpi = '{0:.2f}'.format(min(inner_card_width / 2.24, inner_card_height / 3.24))
         sheet_name = 'Sheet{:02d}_{}dpi.png'.format(sheet_index + 1, dpi)
         sheet_filename = os.path.join(output_dir, sheet_name)
-        sheet_image = Image.new('RGB', (sheet_width, sheet_height), 'white')
+        sheet_image = Image.new('RGB', (int(sheet_width), int(sheet_height)), 'white')
 
         for (i, (image, image_file, card, filename)) in enumerate(cropped_images):
+            print 'width:', image.width, 'vs', inner_card_width
+            print 'height:', image.height, 'vs', inner_card_height
             if image.width != inner_card_width or image.height != inner_card_height:
+                print 'resizing'
                 new_width, new_height = scale_to_fit(image.width, image.height, inner_card_width, inner_card_height)
                 new_width, new_height = ceil(new_width), ceil(new_height)
+                print new_width, 'x', new_height
                 if new_width != image.width and new_height != image.height:
-                    image = image.resize((new_width, new_height), Image.LANCZOS)
+                    image = image.resize((int(new_width), int(new_height)), Image.LANCZOS)
+            else:
+                print 'not resizing'
             border_image = Image.new('RGB', (outer_card_width, outer_card_height), 'black')
             inner_card_x = max(border_leading, floor((outer_card_width - image.width) / 2.0))
             inner_card_y = max(border_leading, floor((outer_card_height - image.height) / 2.0))
-            border_image.paste(image, (inner_card_x, inner_card_y))
+            border_image.paste(image, (int(inner_card_x), int(inner_card_y)))
 
             outer_card_x = outer_card_width * (i % 3)
             outer_card_y = outer_card_height * floor(i / 3)
-            sheet_image.paste(border_image, (outer_card_x, outer_card_y))
+            sheet_image.paste(border_image, (int(outer_card_x), int(outer_card_y)))
 
         if not os.path.exists(output_dir):
             log('Creating output dir: {}\n'.format(output_dir))
             os.makedirs(output_dir)
 
-        print(os.path.join(args.output_dir, sheet_name))
+        six.print_(os.path.join(args.output_dir, sheet_name))
         sheet_image.save(sheet_filename)
