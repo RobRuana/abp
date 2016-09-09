@@ -23,10 +23,10 @@
 # SOFTWARE.
 
 '''
-# Example input file, comments and blank lines are fine
+# Example input file, comments and blank lines are supported
 
-# Cards names can be listed directly, one per line, misspellings are okay
-Pia Nalaar              # In-line comments are also supported
+# Cards names are listed one per line, misspellings are okay
+Pia Nalaar              # Inline comments are also supported
 Saheeli's Artistry      # Spaces, capitals, and punctuation are fine
 
 # For multiples of the same card, list them multiple times

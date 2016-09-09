@@ -11,10 +11,10 @@ $ python abp.py cards.txt
 
 ## cards.txt
 ```
-# Example input file, comments and blank lines are fine
+# Example input file, comments and blank lines are supported
 
-# Cards names can be listed directly, one per line
-Pia Nalaar              # In-line comments are also supported
+# Cards names are listed one per line, misspellings are okay
+Pia Nalaar              # Inline comments are also supported
 Saheeli's Artistry      # Spaces, capitals, and punctuation are fine
 
 # For multiples of the same card, list them multiple times
@@ -34,6 +34,7 @@ http://magiccards.info/vma/en/4.html # Black Lotus
 
 # Image files from any site can also be listed explicitly
 http://magiccards.info/scans/en/vma/1.jpg # Ancestral Recall
+
 ```
 
 ## Sheet01_134.26dpi.png
