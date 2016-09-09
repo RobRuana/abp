@@ -70,8 +70,10 @@ from six.moves.urllib.parse import quote, unquote_plus, urlparse
 parser = argparse.ArgumentParser(description='A.B.P. Always Be Proxying. Generate proxy sheets from mythicspoiler.com')
 parser.add_argument('input', type=open, metavar='FILE', help='each line of FILE should be a MtG card name, or a url')
 parser.add_argument('-v, --verbose', dest='verbose', action='store_true', help='print verbose details')
-parser.add_argument('-o, --output', dest='output_dir', metavar='DIR', default='.', help='output dir, defaults to current dir')
-parser.add_argument('-m, --margin', dest='margin', metavar='PERCENT', default=3, type=float , help='border width as a percent of card width, defaults to 3')
+output_group = parser.add_argument_group('output arguments')
+output_group.add_argument('-m, --margin', dest='margin', metavar='PERCENT', default=3, type=float , help='border width as a percent of card width, defaults to 3')
+output_group.add_argument('-o, --output', dest='output_dir', metavar='DIR', default='.', help='output dir, defaults to current dir')
+output_group.add_argument('-p, --resolution', dest='resolution', metavar='RES', default=600.0, type=float , help='print resolution of output PDF')
 cache_group = parser.add_argument_group('caching arguments', description='NOTE: Careful turning off cache, search engines may ban your IP')
 cache_group.add_argument('-c, --cache', dest='cache_dir', metavar='DIR', default='abp_cache', help='cache dir, defaults to abp_cache')
 cache_group.add_argument('-n, --no-cache', dest='no_cache', action='store_true', help='don\'t cache any downloaded files')
@@ -84,6 +86,7 @@ class RoundRobinIter(object):
         self.nextIndex = 0
         self.stopIndex = -1
         self.indexable = indexable
+
     def __iter__(self):
         self.stopIndex = -1
         return self
@@ -300,18 +303,16 @@ with create_download_dir() as download_dir:
         purge_cache(cards, download_dir)
         log('')
 
+    # Empirically determined card size == (2.24 inches, 3.24 inches)
+    inner_card_width = 2.4 * args.resolution
+    inner_card_height = 3.4 * args.resolution
+
     images = list(images_for_cards(cards, download_dir))
     for (sheet_index, sheet) in enumerate(chunks(images, 9)):
-        inner_card_width = 0
-        inner_card_height = 0
         cropped_images = []
         for (image, image_file, card, filename) in sheet:
             cropped_image = crop_border(image)
             cropped_images.append((cropped_image, image_file, card, filename))
-            if cropped_image.width > inner_card_width:
-                inner_card_width = cropped_image.width
-            if cropped_image.height > inner_card_height:
-                inner_card_height = cropped_image.height
 
         border = round(inner_card_width * (args.margin / 100.0) * 2.0) / 2.0
         border_leading = int(floor(border))
@@ -319,12 +320,10 @@ with create_download_dir() as download_dir:
         outer_card_width = inner_card_width + border_leading + border_trailing
         outer_card_height = inner_card_height + border_leading + border_trailing
         card_count = len(sheet)
-        sheet_width = outer_card_width * min(3, card_count)
-        sheet_height = outer_card_height * ceil(card_count / 3)
+        sheet_width = outer_card_width * min(3.0, card_count)
+        sheet_height = outer_card_height * ceil(card_count / 3.0)
 
-        # Empirically determined card size == (2.24 inches, 3.24 inches)
-        dpi = '{0:.2f}'.format(min(inner_card_width / 2.24, inner_card_height / 3.24))
-        sheet_name = 'Sheet{:02d}_{}dpi.png'.format(sheet_index + 1, dpi)
+        sheet_name = 'Sheet{:02d}.pdf'.format(sheet_index + 1)
         sheet_filename = os.path.join(output_dir, sheet_name)
         sheet_image = Image.new('RGB', (int(sheet_width), int(sheet_height)), 'white')
 
@@ -335,13 +334,13 @@ with create_download_dir() as download_dir:
                 if new_width != image.width and new_height != image.height:
                     image = image.resize((int(new_width), int(new_height)), Image.LANCZOS)
 
-            border_image = Image.new('RGB', (outer_card_width, outer_card_height), 'black')
+            border_image = Image.new('RGB', (int(outer_card_width), int(outer_card_height)), 'black')
             inner_card_x = max(border_leading, floor((outer_card_width - image.width) / 2.0))
             inner_card_y = max(border_leading, floor((outer_card_height - image.height) / 2.0))
             border_image.paste(image, (int(inner_card_x), int(inner_card_y)))
 
-            outer_card_x = outer_card_width * (i % 3)
-            outer_card_y = outer_card_height * floor(i / 3)
+            outer_card_x = outer_card_width * (i % 3.0)
+            outer_card_y = outer_card_height * floor(i / 3.0)
             sheet_image.paste(border_image, (int(outer_card_x), int(outer_card_y)))
 
         if not os.path.exists(output_dir):
@@ -349,4 +348,4 @@ with create_download_dir() as download_dir:
             os.makedirs(output_dir)
 
         six.print_(os.path.join(args.output_dir, sheet_name))
-        sheet_image.save(sheet_filename)
+        sheet_image.save(sheet_filename, 'PDF', quality=95, resolution=args.resolution, resolution_unit='inch')
