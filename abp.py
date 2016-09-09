@@ -304,8 +304,8 @@ with create_download_dir() as download_dir:
         log('')
 
     # Empirically determined card size == (2.24 inches, 3.24 inches)
-    inner_card_width = 2.4 * args.resolution
-    inner_card_height = 3.4 * args.resolution
+    inner_card_width = int(round(2.4 * args.resolution))
+    inner_card_height = int(round(3.4 * args.resolution))
 
     images = list(images_for_cards(cards, download_dir))
     for (sheet_index, sheet) in enumerate(chunks(images, 9)):
