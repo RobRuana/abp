@@ -207,7 +207,7 @@ def url_best_match(filename, urls, threshold):
 
 def search_for_card_with_engine(engine, card, filename, download_dir):
     url, css_selector = search_engines[engine]
-    text = cached_get(url, '"{}" site:mythicspoiler.com'.format(card), '{}_{}_search.html'.format(filename, engine), download_dir)
+    text = cached_get(url, '{} site:mythicspoiler.com'.format(card), '{}_{}_search.html'.format(filename, engine), download_dir)
     if not text:
         return None
     doc = html.fromstring(text)
