@@ -1,9 +1,9 @@
 # A.B.P. Always Be Proxying
 ## Generate MtG proxy sheets from mythicspoiler.com
 
-`abp.py` takes a text file specifying a list of MtG cards and generates a set of `*.png` images with the cards in a 3x3 layout. The output files will have the correct print DPI in the filename: `Sheet01_134.26dpi.png`.
+`abp.py` takes a text file specifying a list of MtG cards and generates a set of 3x3 sheets. The output files will have the correct print DPI in the filename: `Sheet01_134.26dpi.png`.
 
-Unless otherwise specified, the source images are pulled from [mythicspoiler.com](mythicspoiler.com).
+Unless otherwise specified, the source images are pulled from [mythicspoiler.com](http://mythicspoiler.com).
 ```
 $ python abp.py cards.txt
 ./Sheet01_134.26dpi.png
