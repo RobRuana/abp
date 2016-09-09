@@ -53,6 +53,7 @@ import glob
 import os
 import re
 import requests
+import shutil
 import tempfile
 import time
 
@@ -69,15 +70,16 @@ from six.moves.urllib.parse import quote, unquote_plus, urlparse
 
 parser = argparse.ArgumentParser(description='A.B.P. Always Be Proxying. Generate proxy sheets from mythicspoiler.com')
 parser.add_argument('input', type=open, metavar='FILE', help='each line of FILE should be a MtG card name, or a url')
-parser.add_argument('-v, --verbose', dest='verbose', action='store_true', help='print verbose details')
-output_group = parser.add_argument_group('output arguments')
-output_group.add_argument('-m, --margin', dest='margin', metavar='PERCENT', default=3, type=float , help='border width as a percent of card width, defaults to 3')
-output_group.add_argument('-o, --output', dest='output_dir', metavar='DIR', default='.', help='output dir, defaults to current dir')
-output_group.add_argument('-p, --resolution', dest='resolution', metavar='RES', default=600.0, type=float , help='print resolution of output PDF')
+parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='print verbose details')
+output_group = parser.add_argument_group('card output arguments')
+output_group.add_argument('-m', '--margin', dest='margin', metavar='N', default=3, type=float , help='border width as a percent of card width, defaults to 3')
+output_group.add_argument('-o', '--output', dest='output_dir', metavar='DIR', default='.', help='output dir, defaults to current dir')
+output_group.add_argument('-p', '--resolution', dest='resolution', metavar='N', default=600.0, type=float , help='print resolution of output PDF, defaults to 600')
+output_group.add_argument('-s', '--site', dest='site', metavar='URL', default='mythicspoiler.com', help='site to search for card images, defaults to mythicspoiler.com')
 cache_group = parser.add_argument_group('caching arguments', description='NOTE: Careful turning off cache, search engines may ban your IP')
-cache_group.add_argument('-c, --cache', dest='cache_dir', metavar='DIR', default='abp_cache', help='cache dir, defaults to abp_cache')
-cache_group.add_argument('-n, --no-cache', dest='no_cache', action='store_true', help='don\'t cache any downloaded files')
-cache_group.add_argument('-r, --refresh', dest='refresh', action='store_true', help='force refresh of any cached downloads')
+cache_group.add_argument('-c', '--cache', dest='cache_dir', metavar='DIR', default='abp_cache', help='cache dir, defaults to abp_cache')
+cache_group.add_argument('-n', '--no-cache', dest='no_cache', action='store_true', help='don\'t cache any downloaded files')
+cache_group.add_argument('-r', '--refresh', dest='refresh', action='store_true', help='force refresh of any cached downloads')
 args = parser.parse_args()
 
 
@@ -86,14 +88,11 @@ class RoundRobinIter(object):
         self.nextIndex = 0
         self.stopIndex = -1
         self.indexable = indexable
-
     def __iter__(self):
         self.stopIndex = -1
         return self
-
     def next(self):
         return self.__next__()
-
     def __next__(self):
         if self.stopIndex == -1:
             self.stopIndex = self.nextIndex
@@ -145,8 +144,16 @@ def create_download_dir():
 
 def card_to_filename(card):
     if card.startswith('http'):
-        card, _ = os.path.splitext(os.path.basename(unquote_plus(urlparse(card).path)))
+        card, _ = parse_url_filename(card)
     return re.sub(r'\W', '', card.encode('ascii', 'ignore').decode('utf-8').lower())
+
+def string_to_filename(s):
+    return re.sub(r'[^\w\.]', '', s.encode('ascii', 'ignore').decode('utf-8').lower())
+
+def parse_url_filename(url):
+    if url:
+        return os.path.splitext(os.path.basename(urlparse(url).path))
+    return '', ''
 
 def parse_cards(file):
     lines = [line.partition('#')[0].strip() for line in file]
@@ -154,23 +161,40 @@ def parse_cards(file):
 
 def purge_cache(cards, download_dir):
     for (card, filename) in cards:
-        for file in glob.glob(os.path.join(download_dir, '{}*'.format(filename))):
-            log('Deleting cache file {}'.format(file))
-            os.remove(file)
+        cache_dir = os.path.join(download_dir, filename + '_cache')
+        if os.path.exists(cache_dir):
+            log('Deleting cache dir {}'.format(cache_dir))
+            shutil.rmtree(cache_dir)
 
-def find_cache(glob_exp, download_dir):
-    files = glob.glob(os.path.join(download_dir, glob_exp))
+def cached_image(filename, download_dir):
+    cache_dir = os.path.join(download_dir, filename + '_cache')
+    glob_exp = filename + '.*'
+    files = glob.glob(os.path.join(cache_dir, glob_exp))
     if files:
         return files[0]
     return None
 
-def cached_download(url, filename, download_dir, query=''):
-    cache_file = os.path.join(download_dir, filename)
+def cached_download(url, filename, download_dir, query='', cache_filename=None):
+    if not url:
+        return None
     log('    GET \'{}{}\''.format(url, query))
+    query_url = url + quote(query)
+
+    cache_dir = os.path.join(download_dir, filename + '_cache')
+    if not os.path.exists(cache_dir):
+        log('        Creating cache dir: {}'.format(cache_dir))
+        os.makedirs(cache_dir)
+    if cache_filename:
+        _, ext = parse_url_filename(url)
+        cache_filename = '{}{}'.format(cache_filename, ext)
+    else:
+        cache_filename = string_to_filename(query_url)
+    cache_file = os.path.join(cache_dir, cache_filename)
+
     if os.path.exists(cache_file):
         log('        Using cached file: {}'.format(cache_file))
     else:
-        response = requests.get(url + quote(query), stream=True)
+        response = requests.get(query_url, stream=True)
         if response.ok:
             with open(cache_file, 'wb') as output:
                 for chunk in response.iter_content(chunk_size=1024):
@@ -183,20 +207,27 @@ def cached_download(url, filename, download_dir, query=''):
         time.sleep(0.5)
     return cache_file
 
-def cached_get(url, query, filename, download_dir):
+def cached_get(url, filename, download_dir, query=''):
     cache_file = cached_download(url, filename, download_dir, query)
     text = None
-    if os.path.exists(cache_file):
+    if cache_file and os.path.exists(cache_file):
         with open(cache_file, 'r') as input:
             text = input.read()
     return text
 
-def url_best_match(filename, urls, threshold):
+def url_best_match(card, filename, source_url, urls, threshold=0.7):
     results = []
-    for url in urls:
-        url_filename, _ = os.path.splitext(os.path.basename(urlparse(url).path))
-        ratio = SequenceMatcher(None, filename, url_filename).ratio()
-        if ratio >= 0.5:
+    source_filename, _ = parse_url_filename(source_url)
+    for (url, text) in urls:
+        url_filename, _ = parse_url_filename(url)
+        filename_ratio = SequenceMatcher(None, filename, url_filename).ratio()
+        source_ratio = SequenceMatcher(None, source_filename, url_filename).ratio()
+        if card in text:
+            card_ratio = 0.99
+        else:
+            card_ratio = SequenceMatcher(None, card, text).ratio()
+        ratio = max(filename_ratio, card_ratio, source_ratio)
+        if ratio >= threshold:
             results.append((url, ratio))
 
     log('        Found {} result{}'.format(len(results), '' if len(results) == 1 else 's'))
@@ -214,13 +245,17 @@ def url_best_match(filename, urls, threshold):
 
 def search_for_card_with_engine(engine, card, filename, download_dir):
     url, css_selector = search_engines[engine]
-    text = cached_get(url, '{} site:mythicspoiler.com'.format(card), '{}_{}_search.html'.format(filename, engine), download_dir)
+    text = cached_get(url, filename, download_dir, '{} site:{}'.format(card, args.site))
     if not text:
         return None
     doc = html.fromstring(text)
-    urls = [a.get('href').strip() for a in doc.cssselect(css_selector) if a.get('href')]
-    urls = OrderedDict([(url, True) for url in urls if url]).keys()
-    return url_best_match(filename, urls, 0.5)
+    urls = OrderedDict()
+    for a in doc.cssselect(css_selector):
+        href = a.get('href', '').strip()
+        if href.startswith('http') and args.site in href and href not in urls:
+            urls[href] = a.text_content().strip()
+    urls = [(href, text) for (href, text) in urls.items()]
+    return url_best_match(card, filename, None, urls)
 
 def search_for_card(card, filename, download_dir):
     for engine in search_engines_round_robin:
@@ -229,9 +264,8 @@ def search_for_card(card, filename, download_dir):
             return result
     return None
 
-def image_url_from_html(html_url, filename, download_dir):
-    html_filename = filename + '_html.html'
-    text = cached_get(html_url, '', html_filename, download_dir)
+def image_url_from_html(html_url, card, filename, download_dir):
+    text = cached_get(html_url, filename, download_dir)
     if not text:
         return None
     doc = html.fromstring(text)
@@ -245,33 +279,32 @@ def image_url_from_html(html_url, filename, download_dir):
             log('    Found relative image url in meta tag: {}'.format(image_url))
             image_url = '{}/{}'.format(image_path_url, image_url)
     else:
-        urls = [i.get('src').strip() for i in doc.cssselect('img') if i.get('src')]
+        urls = [(i.get('src').strip(), i.get('alt').strip()) for i in doc.cssselect('img') if i.get('src')]
         urls = OrderedDict([(url, True) for url in urls if url]).keys()
         log('    Didn\'t find image url in meta tag, searching html...')
-        image_url = url_best_match(filename, urls, 0.5)
+        image_url = url_best_match(card, filename, html_url, urls)
         if not image_url:
             image_url = '{}/{}.jpg'.format(image_path_url, filename)
             log('    Didn\'t find image url in html, guessing: {}'.format(image_url))
     return image_url
 
 def image_file_for_card(card, filename, download_dir):
-    cache_file = find_cache(filename + '.*', download_dir)
+    cache_file = cached_image(filename, download_dir)
     if cache_file:
         return cache_file
 
     if card.startswith('http'):
         log('Checking {}'.format(card))
         if card.endswith('.html'):
-            image_url = image_url_from_html(card, filename, download_dir)
+            image_url = image_url_from_html(card, card, filename, download_dir)
         else:
             image_url = card
     else:
-        log('Searching mythicspoiler.com for "{}"...'.format(card))
+        log('Searching {} for "{}"...'.format(args.site, card))
         html_url = search_for_card(card, filename, download_dir)
-        image_url = image_url_from_html(html_url, filename, download_dir)
+        image_url = image_url_from_html(html_url, card, filename, download_dir)
 
-    image_filename = os.path.basename(urlparse(image_url).path)
-    image_filename = cached_download(image_url, image_filename, download_dir)
+    image_filename = cached_download(image_url, filename, download_dir, cache_filename=filename)
     log('')
     return image_filename
 
@@ -282,7 +315,7 @@ def images_for_cards(cards, download_dir):
             image = Image.open(image_file)
             yield (image, image_file, card, filename)
         else:
-            six.print_('Could not find image for "{}"'.format(card))
+            six.print_('Could not find image for "{}"\n'.format(card))
 
 def crop_border(image):
     bright_image = ImageEnhance.Brightness(image).enhance(2)
