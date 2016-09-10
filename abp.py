@@ -69,7 +69,7 @@ from six.moves.urllib.parse import quote, unquote_plus, urlparse
 
 
 parser = argparse.ArgumentParser(description='A.B.P. Always Be Proxying. Generate proxy sheets from mythicspoiler.com')
-parser.add_argument('input', type=open, metavar='FILE', help='each line of FILE should be a MtG card name, or a url')
+parser.add_argument('input', metavar='FILE', nargs='+', help='each line of FILE should be a MtG card name, or a url')
 parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='print verbose details')
 output_group = parser.add_argument_group('card output arguments')
 output_group.add_argument('-m', '--margin', dest='margin', metavar='N', default=3, type=float , help='border width as a percent of card width, defaults to 3')
@@ -110,6 +110,7 @@ search_engines = OrderedDict([
     ('yahoo', ('https://search.yahoo.com/search?p=', 'a'))])
 
 search_engines_round_robin = RoundRobinIter(list(search_engines.keys()))
+
 
 # Only prints when --verbose
 def log(*s, **kw):
@@ -159,11 +160,10 @@ def parse_cards(file):
     lines = [line.partition('#')[0].strip() for line in file]
     return [(card, card_to_filename(card)) for card in lines if card]
 
-def purge_cache(cards, download_dir):
-    for (card, filename) in cards:
-        cache_dir = os.path.join(download_dir, filename + '_cache')
+def purge_cache(download_dir):
+    for cache_dir in glob.glob(os.path.join(download_dir, '*_cache')):
         if os.path.exists(cache_dir):
-            log('Deleting cache dir {}'.format(cache_dir))
+            log('Deleting cache dir: {}'.format(cache_dir))
             shutil.rmtree(cache_dir)
 
 def cached_image(filename, download_dir):
@@ -291,6 +291,7 @@ def image_url_from_html(html_url, card, filename, download_dir):
 def image_file_for_card(card, filename, download_dir):
     cache_file = cached_image(filename, download_dir)
     if cache_file:
+        log('Using cached image: {}'.format(cache_file))
         return cache_file
 
     if card.startswith('http'):
@@ -325,20 +326,16 @@ def crop_border(image):
     bbox = diff.getbbox()
     return image.crop(bbox)
 
-
-output_dir = os.path.abspath(os.path.expanduser(args.output_dir))
-
-with create_download_dir() as download_dir:
-    cards = parse_cards(args.input)
-
-    if args.refresh:
-        log('Purging cache because --refresh was specified')
-        purge_cache(cards, download_dir)
-        log('')
+def process_input_file(input_path, output_dir):
+    sheets = []
+    cards = []
+    with open(input_path) as input_file:
+        cards = parse_cards(input_file)
 
     # Empirically determined card size == (2.24 inches, 3.24 inches)
     inner_card_width = int(round(2.4 * args.resolution))
     inner_card_height = int(round(3.4 * args.resolution))
+    sheet_basename, _ = os.path.splitext(os.path.basename(input_path))
 
     images = list(images_for_cards(cards, download_dir))
     for (sheet_index, sheet) in enumerate(chunks(images, 9)):
@@ -356,8 +353,8 @@ with create_download_dir() as download_dir:
         sheet_width = outer_card_width * min(3.0, card_count)
         sheet_height = outer_card_height * ceil(card_count / 3.0)
 
-        sheet_name = 'Sheet{:02d}.pdf'.format(sheet_index + 1)
-        sheet_filename = os.path.join(output_dir, sheet_name)
+        sheet_filename = '{}{:02d}.pdf'.format(sheet_basename, sheet_index + 1)
+        sheet_path = os.path.join(output_dir, sheet_filename)
         sheet_image = Image.new('RGB', (int(sheet_width), int(sheet_height)), 'white')
 
         for (i, (image, image_file, card, filename)) in enumerate(cropped_images):
@@ -380,5 +377,23 @@ with create_download_dir() as download_dir:
             log('Creating output dir: {}\n'.format(output_dir))
             os.makedirs(output_dir)
 
-        six.print_(os.path.join(args.output_dir, sheet_name))
-        sheet_image.save(sheet_filename, 'PDF', quality=95, resolution=args.resolution, resolution_unit='inch')
+        log('Saving: {}\n'.format(sheet_path))
+        sheet_image.save(sheet_path, 'PDF', quality=95, resolution=args.resolution, resolution_unit='inch')
+        sheets.append(sheet_filename)
+
+    return sheets
+
+
+with create_download_dir() as download_dir:
+    if args.refresh:
+        log('Purging cache because --refresh was specified')
+        purge_cache(download_dir)
+        log('')
+
+    sheets = []
+    output_dir = os.path.abspath(os.path.expanduser(args.output_dir))
+    for input_path in args.input:
+        sheets.extend(process_input_file(input_path, output_dir))
+
+    for sheet in sheets:
+        six.print_(os.path.join(args.output_dir, sheet))
