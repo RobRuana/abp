@@ -395,8 +395,8 @@ def main(argv=None):
 
     cache_group = parser.add_argument_group('caching arguments',
                                             description='NOTE: Careful turning off cache, search engines may ban your IP')
-    cache_group.add_argument('-c', '--cache', dest='cache_dir', metavar='DIR', default='abp_cache',
-                             help='cache dir, defaults to abp_cache')
+    cache_group.add_argument('-c', '--cache', dest='cache_dir', metavar='DIR', default='hudsucker_cache',
+                             help='cache dir, defaults to hudsucker_cache')
     cache_group.add_argument('-n', '--no-cache', dest='no_cache', action='store_true',
                              help='don\'t cache any downloaded files')
     cache_group.add_argument('-r', '--refresh', dest='refresh', action='store_true',

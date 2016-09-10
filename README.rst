@@ -1,16 +1,16 @@
-A.B.P. Always Be Proxying
+Hudsucker Proxy Generator
 =========================
 
-Generate MtG proxy sheets from mythicspoiler.com
-------------------------------------------------
+Generate MtG proxy sheets from mythicspoiler.com & other sites
+--------------------------------------------------------------
 
-``abp.py`` takes a text file specifying a list of MtG cards and generates a set of 3x3 PDF sheets.
+``hudsucker`` takes a text file specifying a list of MtG cards and generates a set of 3x3 PDF sheets.
 
 Unless otherwise specified, the source images are pulled from `mythicspoiler.com <http://mythicspoiler.com>`_.
 
 ::
 
-    $ python abp.py cards.txt
+    $ hudsucker cards.txt
     ./cards01.pdf
 
 
@@ -47,7 +47,7 @@ cards.txt
 cards01.pdf
 -----------
 
-.. image:: https://github.com/RobRuana/abp/raw/master/example_Sheet01_134.26dpi.png
+.. image:: https://github.com/RobRuana/hudsucker/raw/master/example_Sheet01_134.26dpi.png
    :alt: Example output
 
 
@@ -56,7 +56,7 @@ Installation
 
 ::
 
-    pip install abp
+    pip install hudsucker
 
 
 If it fails with the following error message::
@@ -73,4 +73,4 @@ Try installing ``libjpeg`` (or equivalent for your OS)::
 Contributing
 ------------
 
-Report bugs or make pull requests on `GitHub <https://github.com/RobRuana/abp>`_.
+Report bugs or make pull requests on `GitHub <https://github.com/RobRuana/hudsucker>`_.
