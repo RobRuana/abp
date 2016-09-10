@@ -6,7 +6,7 @@
 Unless otherwise specified, the source images are pulled from [mythicspoiler.com](http://mythicspoiler.com).
 ```
 $ python abp.py cards.txt
-./Sheet01.pdf
+./cards01.pdf
 ```
 
 ## cards.txt
@@ -37,7 +37,7 @@ http://magiccards.info/scans/en/vma/1.jpg # Ancestral Recall
 
 ```
 
-## Sheet01.pdf
+## cards01.pdf
 ![alt text](https://github.com/RobRuana/abp/raw/master/example_Sheet01_134.26dpi.png "Example output")
 
 ## Installation
