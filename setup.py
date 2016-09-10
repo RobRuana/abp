@@ -14,7 +14,7 @@ from setuptools import setup, find_packages
 
 # Package versioning solution originally found here:
 # http://stackoverflow.com/q/458550
-exec(open('_version.py').read())
+exec(open(os.path.join('hudsucker', '_version.py')).read())
 
 reqs = open('requirements.txt', 'r').read().strip().splitlines()
 
@@ -45,6 +45,6 @@ setup(
     install_requires=reqs,
     tests_require=reqs,
     entry_points={
-        'console_scripts': ['hudsucker = hudsucker:main']
+        'console_scripts': ['hudsucker = hudsucker.__main__:main']
     },
 )

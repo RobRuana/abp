@@ -3,6 +3,18 @@
 This file describes user-visible changes between hudsucker versions.
 
 
+Version 0.1.2 (2016-09-10)
+--------------------------
+
+* Fixes help description.
+
+
+Version 0.1.1 (2016-09-10)
+--------------------------
+
+* Fixes broken python package.
+
+
 Version 0.1 (2016-09-10)
 ------------------------
 

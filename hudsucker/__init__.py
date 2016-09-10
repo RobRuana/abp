@@ -379,7 +379,7 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    parser = argparse.ArgumentParser(description='A.B.P. Always Be Proxying. Generate proxy sheets from mythicspoiler.com')
+    parser = argparse.ArgumentParser(description='Hudsucker Proxy Generator - generate MtG proxy sheets')
     parser.add_argument('input', metavar='FILE', nargs='+', help='each line of FILE should be a MtG card name, or a url')
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='print verbose details')
 
