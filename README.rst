@@ -70,6 +70,39 @@ Try installing ``libjpeg`` (or equivalent for your OS)::
     brew install libjpeg
 
 
+Help
+----
+
+::
+
+    $ hudsucker --help
+    usage: hudsucker [-h] [-v] [-m N] [-o DIR] [-p N] [-s URL] [-c DIR] [-n] [-r]
+                     FILE [FILE ...]
+
+    Hudsucker Proxy Generator - generate MtG proxy sheets
+
+    positional arguments:
+      FILE                  each line of FILE should be a MtG card name, or a url
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -v, --verbose         print verbose details
+
+    card output arguments:
+      -m N, --margin N      border width as a percent of card width, defaults to 3
+      -o DIR, --output DIR  output dir, defaults to current dir
+      -p N, --resolution N  print resolution of output PDF, defaults to 600
+      -s URL, --site URL    site to search for card images, defaults to
+                            mythicspoiler.com
+
+    caching arguments:
+      NOTE: Careful turning off cache, search engines may ban your IP
+
+      -c DIR, --cache DIR   cache dir, defaults to hudsucker_cache
+      -n, --no-cache        don't cache any downloaded files
+      -r, --refresh         force refresh of any cached downloads
+
+
 Contributing
 ------------
 
