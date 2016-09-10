@@ -52,7 +52,7 @@ cards01.pdf
 
 
 Installation
------------
+------------
 
 ::
 
@@ -70,4 +70,7 @@ Try installing ``libjpeg`` (or equivalent for your OS)::
     brew install libjpeg
 
 
+Contributing
+------------
 
+Report bugs or make pull requests on `GitHub <https://github.com/RobRuana/abp>`_.
