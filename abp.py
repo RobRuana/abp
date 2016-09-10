@@ -54,45 +54,34 @@ import os
 import re
 import requests
 import shutil
+import six
+import sys
 import tempfile
 import time
 
-import six
 from collections import OrderedDict
 from contextlib import contextmanager
 from difflib import SequenceMatcher
-
 from lxml import html
 from math import ceil, floor
 from PIL import Image, ImageChops, ImageEnhance
 from six.moves.urllib.parse import quote, unquote_plus, urlparse
 
 
-parser = argparse.ArgumentParser(description='A.B.P. Always Be Proxying. Generate proxy sheets from mythicspoiler.com')
-parser.add_argument('input', metavar='FILE', nargs='+', help='each line of FILE should be a MtG card name, or a url')
-parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='print verbose details')
-output_group = parser.add_argument_group('card output arguments')
-output_group.add_argument('-m', '--margin', dest='margin', metavar='N', default=3, type=float , help='border width as a percent of card width, defaults to 3')
-output_group.add_argument('-o', '--output', dest='output_dir', metavar='DIR', default='.', help='output dir, defaults to current dir')
-output_group.add_argument('-p', '--resolution', dest='resolution', metavar='N', default=600.0, type=float , help='print resolution of output PDF, defaults to 600')
-output_group.add_argument('-s', '--site', dest='site', metavar='URL', default='mythicspoiler.com', help='site to search for card images, defaults to mythicspoiler.com')
-cache_group = parser.add_argument_group('caching arguments', description='NOTE: Careful turning off cache, search engines may ban your IP')
-cache_group.add_argument('-c', '--cache', dest='cache_dir', metavar='DIR', default='abp_cache', help='cache dir, defaults to abp_cache')
-cache_group.add_argument('-n', '--no-cache', dest='no_cache', action='store_true', help='don\'t cache any downloaded files')
-cache_group.add_argument('-r', '--refresh', dest='refresh', action='store_true', help='force refresh of any cached downloads')
-args = parser.parse_args()
+class CircularIter(object):
 
-
-class RoundRobinIter(object):
     def __init__(self, indexable):
         self.nextIndex = 0
         self.stopIndex = -1
         self.indexable = indexable
+
     def __iter__(self):
         self.stopIndex = -1
         return self
+
     def next(self):
         return self.__next__()
+
     def __next__(self):
         if self.stopIndex == -1:
             self.stopIndex = self.nextIndex
@@ -109,8 +98,10 @@ search_engines = OrderedDict([
     ('duckduckgo', ('https://duckduckgo.com/html/?q=', 'a')),
     ('yahoo', ('https://search.yahoo.com/search?p=', 'a'))])
 
-search_engines_round_robin = RoundRobinIter(list(search_engines.keys()))
+search_engines_round_robin = CircularIter(list(search_engines.keys()))
 
+# Global args parsed from command line
+args = None
 
 # Only prints when --verbose
 def log(*s, **kw):
@@ -326,7 +317,7 @@ def crop_border(image):
     bbox = diff.getbbox()
     return image.crop(bbox)
 
-def process_input_file(input_path, output_dir):
+def process_input_file(input_path, output_dir, download_dir):
     sheets = []
     cards = []
     with open(input_path) as input_file:
@@ -384,16 +375,52 @@ def process_input_file(input_path, output_dir):
     return sheets
 
 
-with create_download_dir() as download_dir:
-    if args.refresh:
-        log('Purging cache because --refresh was specified')
-        purge_cache(download_dir)
-        log('')
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
 
-    sheets = []
-    output_dir = os.path.abspath(os.path.expanduser(args.output_dir))
-    for input_path in args.input:
-        sheets.extend(process_input_file(input_path, output_dir))
+    parser = argparse.ArgumentParser(description='A.B.P. Always Be Proxying. Generate proxy sheets from mythicspoiler.com')
+    parser.add_argument('input', metavar='FILE', nargs='+', help='each line of FILE should be a MtG card name, or a url')
+    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='print verbose details')
 
-    for sheet in sheets:
-        six.print_(os.path.join(args.output_dir, sheet))
+    output_group = parser.add_argument_group('card output arguments')
+    output_group.add_argument('-m', '--margin', dest='margin', metavar='N', default=3, type=float ,
+                              help='border width as a percent of card width, defaults to 3')
+    output_group.add_argument('-o', '--output', dest='output_dir', metavar='DIR', default='.',
+                              help='output dir, defaults to current dir')
+    output_group.add_argument('-p', '--resolution', dest='resolution', metavar='N', default=600.0, type=float ,
+                              help='print resolution of output PDF, defaults to 600')
+    output_group.add_argument('-s', '--site', dest='site', metavar='URL', default='mythicspoiler.com',
+                              help='site to search for card images, defaults to mythicspoiler.com')
+
+    cache_group = parser.add_argument_group('caching arguments',
+                                            description='NOTE: Careful turning off cache, search engines may ban your IP')
+    cache_group.add_argument('-c', '--cache', dest='cache_dir', metavar='DIR', default='abp_cache',
+                             help='cache dir, defaults to abp_cache')
+    cache_group.add_argument('-n', '--no-cache', dest='no_cache', action='store_true',
+                             help='don\'t cache any downloaded files')
+    cache_group.add_argument('-r', '--refresh', dest='refresh', action='store_true',
+                             help='force refresh of any cached downloads')
+
+    global args
+    args = parser.parse_args(argv[1:])
+
+    verbose = args.verbose
+
+    with create_download_dir() as download_dir:
+        if args.refresh:
+            log('Purging cache because --refresh was specified')
+            purge_cache(download_dir)
+            log('')
+
+        sheets = []
+        output_dir = os.path.abspath(os.path.expanduser(args.output_dir))
+        for input_path in args.input:
+            sheets.extend(process_input_file(input_path, output_dir, download_dir))
+
+        for sheet in sheets:
+            six.print_(os.path.join(args.output_dir, sheet))
+
+
+if __name__ == '__main__':
+    sys.exit(main())
