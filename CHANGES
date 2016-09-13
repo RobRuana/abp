@@ -3,6 +3,14 @@
 This file describes user-visible changes between hudsucker versions.
 
 
+Version 0.2 (2016-13-10)
+------------------------
+
+* Fixes issue whereby similarly named urls could cause cache collisions,
+  for example: example.com/old/123.jpg and example.com/new/123.jpg
+* Adds --quality command line switch to control quality of output JPEG encoder
+
+
 Version 0.1.2 (2016-09-10)
 --------------------------
 
