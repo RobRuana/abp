@@ -75,8 +75,8 @@ Help
 
 ::
 
-    $ hudsucker --help
-    usage: hudsucker [-h] [-v] [-m N] [-o DIR] [-p N] [-s URL] [-c DIR] [-n] [-r]
+    usage: hudsucker [-h] [-v] [-b N] [-o DIR] [-p N] [-q N] [-s URL] [-c DIR]
+                     [-n] [-r]
                      FILE [FILE ...]
 
     Hudsucker Proxy Generator - generate MtG proxy sheets
@@ -88,14 +88,15 @@ Help
       -h, --help            show this help message and exit
       -v, --verbose         print verbose details
 
-    card output arguments:
-      -m N, --margin N      border width as a percent of card width, defaults to 3
+    proxy sheet options:
+      -b N, --border N      border width in inches, defaults to 0.072
       -o DIR, --output DIR  output dir, defaults to current dir
       -p N, --resolution N  print resolution of output PDF, defaults to 600
+      -q N, --quality N     quality to use for JPEG encoding, defaults to 95
       -s URL, --site URL    site to search for card images, defaults to
                             mythicspoiler.com
 
-    caching arguments:
+    caching options:
       NOTE: Careful turning off cache, search engines may ban your IP
 
       -c DIR, --cache DIR   cache dir, defaults to hudsucker_cache
