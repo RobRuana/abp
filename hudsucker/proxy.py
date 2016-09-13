@@ -113,10 +113,8 @@ class HulaHoop(object):
             log.indention += 4
 
         log('Downloading: {}'.format(card.image_url))
-        with log.indent(blank_line=True):
-            result = self.cache.get_file(card.image_url, cache_basename=card.image_basename)
-        log.indention = indention
-        return result
+        with log.indent(blank_line=True, exit_indention=indention):
+            return self.cache.get_file(card.image_url, cache_basename=card.image_basename)
 
     def _images_for_cards(self, cards):
         images = []

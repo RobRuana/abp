@@ -84,10 +84,13 @@ class VerbosityLogger(object):
         return outer
 
     @contextmanager
-    def indent(self, n=4, blank_line=False):
+    def indent(self, n=4, blank_line=False, exit_indention=None):
         self.indention += n
         yield self
-        self.indention -= n
+        if exit_indention is not None:
+            self.indention = exit_indention
+        else:
+            self.indention = max(0, self.indention - n)
         if blank_line:
             self()
 
