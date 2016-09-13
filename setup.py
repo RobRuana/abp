@@ -2,11 +2,7 @@
 # Copyright (c) 2016 Rob Ruana
 # Licensed under the MIT License, see LICENSE for details.
 
-"""Hudsucker Proxy Generator
-
-Generate MtG proxy sheets from mythicspoiler.com & other sites.
-
-"""
+"""Hudsucker Proxy Generator"""
 
 import os
 from setuptools import setup, find_packages
