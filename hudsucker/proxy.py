@@ -238,7 +238,8 @@ class HulaHoop(object):
         matching_result = None
         matching_ratio = 0
         for (result, ratio) in results:
-            with log.indent(): log('{} (Matches {:.2f}%)'.format(result, ratio * 100))
+            with log.indent():
+                log('{} (Matches {:.2f}%)'.format(result, ratio * 100))
             if ratio > matching_ratio:
                 matching_result = result
                 matching_ratio = ratio

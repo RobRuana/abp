@@ -98,8 +98,8 @@ class VerbosityLogger(object):
 log = VerbosityLogger()
 
 
-def chunks(iterable, size=2):
-    return [iterable[x:x + size] for x in range(0, len(iterable), size)]
+def chunks(indexable, size=2):
+    return [indexable[x:x + size] for x in range(0, len(indexable), size)]
 
 
 class circular_iter(object):
@@ -126,8 +126,13 @@ class circular_iter(object):
         return nextItem
 
 
-def filesystem_safe(s):
-    return re.sub(r'[^\w\.\-_]+', '_', s.encode('ascii', 'ignore').decode('utf-8'))
+_filesystem_safe_regex = re.compile(r'[^\w\.\-_]+')
+_filesystem_safe_allow_spaces_regex = re.compile(r'[^\w\.\-_ ]+')
+
+
+def filesystem_safe(s, allow_spaces=False, replace_with='_'):
+    regex = _filesystem_safe_allow_spaces_regex if allow_spaces else _filesystem_safe_regex
+    return regex.sub(replace_with, s.encode('ascii', 'replace').decode('utf-8'))
 
 
 def is_imageish(s):
@@ -216,7 +221,8 @@ class DownloadCache(object):
         cache_path = os.path.join(self.cache_dir, cache_filename)
 
         if os.path.exists(cache_path):
-            with log.indent(): log('Using cached file: {}'.format(cache_path))
+            with log.indent():
+                log('Using cached file: {}'.format(cache_path))
             return cache_path
         else:
             response = requests.get(query_url, stream=True)
