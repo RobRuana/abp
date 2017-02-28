@@ -37,7 +37,7 @@ setup(
         'Topic :: Utilities',
     ],
     platforms='any',
-    packages=find_packages(),
+    packages=find_packages(exclude=['tests*']),
     install_requires=reqs,
     tests_require=reqs,
     entry_points={
